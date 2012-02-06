@@ -1,9 +1,9 @@
 Gogles (GO GoogLE Spreadsheet)
 
-This is a GO implementation made with Google Apps Scripts by Alex and Gabriel.
-Players can place stones by entering x in the cell you want to place a piece. Piece chains with no liberties are automatically removed.
+This is a GO implementation made with Google Apps Scripts by Alex Steiner and Gabriel Grill.
+Players can place stones by entering x in the cell they want to place a piece. Piece chains with no liberties left are automatically removed.
 
-For further information have a look at the Go Rules.
+For further information have a look at the official rules of Go.
 
 -
 
