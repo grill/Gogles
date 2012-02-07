@@ -8,6 +8,11 @@ var size    = 19;
 var height  = 10;
 var width   = 10;
 
+//color constants
+var black = "#000000";
+var white = "#ffffff";
+var brown = "#653700";
+
 //Position of the cell which indicates the currently active player
 var turnPosX = size+2;
 var turnPosY = 1;
@@ -97,7 +102,9 @@ function isEmpty(row, col) {
     ss.getRange(row, col).getValue() != player2;
 }
 
+//colors in the playing field
 function funkifize() {
+  //don't use this, too slow
   var sheet = SpreadsheetApp.getActiveSheet();
   var range = 0;
   
@@ -109,10 +116,20 @@ function funkifize() {
   }
 }
 
+//colors in the active player indicator
 function funkifizePlayer() {
-  funkifizeCell(turnPosX, turnPosY);
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var range = sheet.getRange(playercellY,playercellX);
+  if(range.getValue() == 1) {
+    range.setFontColor(white);
+    range.setBackgroundColor(black);
+  } else if(range.getValue() == 2) {
+    range.setFontColor(black);
+    range.setBackgroundColor(white);
+  }
 }
 
+//sets the color of the cell according to wether/which player's piece is placed there
 function funkifizeCell(x,y) {
   var sheet = SpreadsheetApp.getActiveSheet();
   var range = sheet.getRange(x,y);
@@ -121,73 +138,83 @@ function funkifizeCell(x,y) {
   if(range.getValue() == 1) {
     range.setFontColor(black);
     range.setBackgroundColor(black);
-  }
-  if(range.getValue() == 2) {
+  } else if(range.getValue() == 2) {
     range.setFontColor(white);
     range.setBackgroundColor(white);
+  } else {
+    range.setFontColor(brown);
+    range.setBackgroundColor(brown);
   }
 }
 
+//checks the updated cell and sets the color and erases it if has no liberties
 function checkStuff(x,y) {
-  /*killIfNotFree(x,y);
-  for(i in neighbors(x,y)) {
-    killIfNotFree(i[0], i[1]);
-  }*/
+  var ns = neighbors(x,y);
+  funkifizeCell(x,y);
+  for(var i = 0; i < ns.length; i++) {
+    killIfNotFree(ns[i][0], ns[i][1]);
+  }
+  killIfNotFree(x,y);
 }
 
+//checks if the cluster of pieces around (x,y) has liberties and deletes them if they don't
 function killIfNotFree(x,y) {
   var asdf = isFree(x,y);
   var free = asdf[0];
   var cells = asdf[1];
+  var player = asdf[2];
   
   if(! free) {
     var sheet = SpreadsheetApp.getActiveSheet();
     
-    for(i in cells) {
-      sheet.getRange(i[0], i[1]).clear();
+    addPoints(cells.length, player);
+    
+    for(var i = 0; i < cells.length; i++) {
+      sheet.getRange(cells[i][0], cells[i][1]).clear();
+      funkifizeCell(cells[i][0], cells[i][1]);
     }
   }
 }
 
-function testIsFree() {
-  isFree(1,1);
-}
-
+//checks if the cluster of pieces around (x,y) has liberties
 function isFree(x,y) {
-  if(isEmpty(x,y)) return true;//(true, []);
+  if(isEmpty(x,y)) return [true, [], 0];
   
   var q = [];
   var free = false;
   var done = [];
   var i;
+  var ns = [];
   
-  var black = isBlack(x,y);
+  var color = getColor(x,y);
   
-  q.push((x,y));
+  q.push([x,y]);
   while(q.length > 0) {
     i = q.pop();
     done.push(i);
-    for(var n in neighbors(i[0], i[1])) {
-      if(isEmpty(j[0], j[1])) {
+    ns = neighbors(i[0], i[1]);
+    for(var n = 0; n < ns.length; n++) {
+      if(isEmpty(ns[n][0], ns[n][1])) {
         free = true;
-      } else if(black == isBlack(x,y) && done.indexOf(j[0], j[1]) == -1) {
-        q.push(j);
+      } else if(color == getColor(ns[n][0],ns[n][1]) && (! contains(done, ns[n]))) {
+        q.push(ns[n]);
       }
     }
   }
-  //return (free, done);
-  return free;
+  return [free, done, color];
 }
 
+//gets the neighbors for the cell at (x,y)
 function neighbors(x,y) {
   var ret = [];
-  if(inField(x+1, y)) ret.push((x+1,y));
-  if(inField(x, y+1)) ret.push((x,y+1));
-  if(inField(x-1, y)) ret.push((x-1,y));
-  if(inField(x, y-1)) ret.push((x,y-1));
+  if(inField(x+1, y)) ret.push([x+1,y]);
+  if(inField(x, y+1)) ret.push([x,y+1]);
+  if(inField(x-1, y)) ret.push([x-1,y]);
+  if(inField(x, y-1)) ret.push([x,y-1]);
   return ret;
 }
 
+//checks wether (x,y) is inside the playing field
 function inField(x,y) {
   if(x >= 1 && x <= size && y >= 1 && y <= size) {
     return true;
