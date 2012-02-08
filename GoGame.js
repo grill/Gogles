@@ -4,9 +4,9 @@ var player1 = 1;
 //white
 var player2 = 2;
 
-var size    = 19;
-var height  = 10;
-var width   = 10;
+var size = 19;
+var height = 10;
+var width = 10;
 
 //color constants
 var black = "#000000";
@@ -14,13 +14,13 @@ var white = "#ffffff";
 var brown = "#653700";
 
 //Position of the cell which indicates the currently active player
-var turnPosX = size+2;
-var turnPosY = 1;
+var turnPosRow = 1;
+var turnPosCol = size+2;
 
 //Position of the points on the spreadshee
 //[player 1, player 2]
-var lostPosY = [2, 3];
-var lostPosX = size+2;
+var lostPosRow = [2, 3];
+var lostPosCol = size+2;
 
 //adds a menuitem to start a Go game
 function onOpen() {
@@ -33,40 +33,37 @@ function start() {
   var ss = SpreadsheetApp.getActiveSheet();
   ss.getRange(1, 1, size, size).clear();
   
-  for(var x = 1; x <= size; x++) {
-    ss.setRowHeight(x, size);
+  for(var row = 1; row <= size; row++) {
+    ss.setRowHeight(row, size);
   }
 
-  for(var y = 1; y <= size; y++) {
-    ss.setColumnWidth(y, size);
+  for(var col = 1; col <= size; col++) {
+    ss.setColumnWidth(col, size);
   }
   
   ss.getRange(1, 1, size, size).setBorder(true,true,true,true,true,true);
   ss.getRange(1, 1, size, size).setBackgroundColor(brown);
   ss.getRange(1, 1, size, size).setFontColor(brown);
-  
-  ss.getRange(turnPosX, 1, size, lostPosY[1]+1).setFontSize(14);
-  ss.getRange(turnPosX, 1, size, lostPosY[1]+1).setFontWeight("bold");
 
-  ss.getRange(turnPosY, turnPosX).setValue(player1);
+  ss.getRange(turnPosRow, turnPosCol).setValue(player1);
   
-  ss.getRange(lostPosY[0], lostPosX).setValue("0");
-  ss.getRange(lostPosY[1], lostPosX).setValue("0");
+  ss.getRange(lostPosRow[0], lostPosCol).setValue("0");
+  ss.getRange(lostPosRow[1], lostPosCol).setValue("0");
   
-  funkifizePlayer();
+  colorPlayer();
 }
 
 //increases the count of lost pieces of a player by amount
 function incLostPieces(amount, player) {
   var ss = SpreadsheetApp.getActiveSheet();
-  var curPoints = ss.getRange(lostPosY[player-1], lostPosX).getValue();
-  ss.getRange(lostPosY[player-1], lostPosX).setValue(curPoints+amount);
+  var curPoints = ss.getRange(lostPosRow[player-1], lostPosCol).getValue();
+  ss.getRange(lostPosRow[player-1], lostPosCol).setValue(curPoints+amount);
 }
 
 function onEdit() {
   var ss = SpreadsheetApp.getActiveSheet();
   var cell = ss.getActiveCell();
-  var turn = ss.getRange(turnPosY, turnPosX);
+  var turn = ss.getRange(turnPosRow, turnPosCol);
   
   if(inField(cell.getRow(), cell.getColumn())) {
   
@@ -76,10 +73,10 @@ function onEdit() {
       turn.setValue(player2);
     else
       turn.setValue(player1);
-    funkifizePlayer();
+    colorPlayer();
 
     //looks for piece chains without liberties and removes them from the field
-    checkStuff(cell.getRow(), cell.getColumn());
+    checkCell(cell.getRow(), cell.getColumn());
   }
 }
 
@@ -103,23 +100,23 @@ function isEmpty(row, col) {
 }
 
 //colors in the playing field
-function funkifize() {
+function color() {
   //don't use this, too slow
   var sheet = SpreadsheetApp.getActiveSheet();
   var range = 0;
   
-  for(var x = 1; x <= size; x++) {
-    for(var y = 1; y <= size; y++) {
-      range = sheet.getRange(x,y);
-      funkifizeCell(x,y);
+  for(var row = 1; row <= size; row++) {
+    for(var col = 1; col <= size; col++) {
+      range = sheet.getRange(row,col);
+      colorCell(row,col);
     }
   }
 }
 
 //colors in the active player indicator
-function funkifizePlayer() {
+function colorPlayer() {
   var sheet = SpreadsheetApp.getActiveSheet();
-  var range = sheet.getRange(playercellY,playercellX);
+  var range = sheet.getRange(turnPosRow,turnPosCol);
   if(range.getValue() == 1) {
     range.setFontColor(white);
     range.setBackgroundColor(black);
@@ -130,9 +127,9 @@ function funkifizePlayer() {
 }
 
 //sets the color of the cell according to wether/which player's piece is placed there
-function funkifizeCell(x,y) {
+function colorCell(row,col) {
   var sheet = SpreadsheetApp.getActiveSheet();
-  var range = sheet.getRange(x,y);
+  var range = sheet.getRange(row,col);
   var debug = range.getValue();
   
   if(range.getValue() == 1) {
@@ -147,19 +144,19 @@ function funkifizeCell(x,y) {
   }
 }
 
-//checks the updated cell and sets the color and erases it if has no liberties
-function checkStuff(x,y) {
-  var ns = neighbors(x,y);
-  funkifizeCell(x,y);
+//checks the updated cell: sets the correct color and erases it if has no liberties
+function checkCell(row,col) {
+  var ns = neighbors(row,col);
+  colorCell(row,col);
   for(var i = 0; i < ns.length; i++) {
     killIfNotFree(ns[i][0], ns[i][1]);
   }
-  killIfNotFree(x,y);
+  killIfNotFree(row,col);
 }
 
-//checks if the cluster of pieces around (x,y) has liberties and deletes them if they don't
-function killIfNotFree(x,y) {
-  var asdf = isFree(x,y);
+//checks if the cluster of pieces around (row,col) has liberties and deletes them if they don't
+function killIfNotFree(row,col) {
+  var asdf = isFree(row,col);
   var free = asdf[0];
   var cells = asdf[1];
   var player = asdf[2];
@@ -167,18 +164,33 @@ function killIfNotFree(x,y) {
   if(! free) {
     var sheet = SpreadsheetApp.getActiveSheet();
     
-    addPoints(cells.length, player);
+    incLostPieces(cells.length, player);
     
     for(var i = 0; i < cells.length; i++) {
       sheet.getRange(cells[i][0], cells[i][1]).clear();
-      funkifizeCell(cells[i][0], cells[i][1]);
+      colorCell(cells[i][0], cells[i][1]);
     }
   }
 }
 
-//checks if the cluster of pieces around (x,y) has liberties
-function isFree(x,y) {
-  if(isEmpty(x,y)) return [true, [], 0];
+//gets the color of the piece at (row,col)
+function getColor(row,col) {
+  var range = SpreadsheetApp.getActiveSheet().getRange(row,col);
+  return range.getValue();
+}
+
+//checks if an array of length 2 arrays contains another length 2 array
+function contains(arr, coord) {
+  for(var i = 0; i < arr.length; i++) {
+    if(arr[i][0] == coord[0] && arr[i][1] == coord[1])
+      return true;
+  }
+  return false;
+}
+
+//checks if the cluster of pieces around (row,col) has liberties
+function isFree(row,col) {
+  if(isEmpty(row,col)) return [true, [], 0];
   
   var q = [];
   var free = false;
@@ -186,9 +198,9 @@ function isFree(x,y) {
   var i;
   var ns = [];
   
-  var color = getColor(x,y);
+  var color = getColor(row,col);
   
-  q.push([x,y]);
+  q.push([row,col]);
   while(q.length > 0) {
     i = q.pop();
     done.push(i);
@@ -205,18 +217,18 @@ function isFree(x,y) {
 }
 
 //gets the neighbors for the cell at (x,y)
-function neighbors(x,y) {
+function neighbors(row,col) {
   var ret = [];
-  if(inField(x+1, y)) ret.push([x+1,y]);
-  if(inField(x, y+1)) ret.push([x,y+1]);
-  if(inField(x-1, y)) ret.push([x-1,y]);
-  if(inField(x, y-1)) ret.push([x,y-1]);
+  if(inField(row+1, col)) ret.push([row+1,col]);
+  if(inField(row, col+1)) ret.push([row,col+1]);
+  if(inField(row-1, col)) ret.push([row-1,col]);
+  if(inField(row, col-1)) ret.push([row,col-1]);
   return ret;
 }
 
 //checks wether (x,y) is inside the playing field
-function inField(x,y) {
-  if(x >= 1 && x <= size && y >= 1 && y <= size) {
+function inField(row,col) {
+  if(row >= 1 && row <= size && col >= 1 && col <= size) {
     return true;
   }
   return false;
